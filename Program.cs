@@ -1,44 +1,16 @@
 ﻿using Advent2023_20;
-using System.Runtime.Serialization;
+using System.Diagnostics;
 
 List<string> lines = new();
 using (StreamReader reader = new(args[0]))
     while (!reader.EndOfStream)
         lines.Add(reader.ReadLine() ?? "");
 
-Dictionary<string, Module> modules = new();
-
-/** INIT MODULES **/
-foreach (var line in lines)
-{
-    var ls = line.Split(" -> ");
-    string moduleName = ls[0];
-    var destinations = ls[1].Split(", ");
-    switch (moduleName[0])
-    {
-        case '%':
-            modules.Add(moduleName[1..], new FlipFlop(moduleName[1..], destinations));
-            break;
-        case '&':
-            modules.Add(moduleName[1..], new Conjuntion(moduleName[1..], destinations));
-            break;
-        default:
-            modules.Add(moduleName, new Broadcast(moduleName, destinations));
-            break;
-    }
-}
-Dictionary<string, Conjuntion> conjunctions = [];
-foreach(var conjunction in modules.Values.OfType<Conjuntion>())
-    conjunctions.Add(conjunction.ID, conjunction);
-
-foreach (var module in modules.Values)
-    foreach (var destinationId in module.Destinations)
-        if (conjunctions.TryGetValue(destinationId, out var conjuntion))
-            conjuntion.addMemoryCell(module.ID);
-
+var (modules,conjunctions) = initModules(lines);
 part1();
 resetModules();
 part2();
+
 void part1()
 {
     (uint? lows, uint? highs) count = (0, 0);
@@ -95,6 +67,39 @@ void part2()
         }
     }
 
+}
+
+(Dictionary<string,Module> modules, Dictionary<string, Conjuntion> conjunctions) initModules(List<string> lines)
+{
+    Dictionary<string, Module> modules = new();
+    foreach (var line in lines)
+    {
+        var ls = line.Split(" -> ");
+        string moduleName = ls[0];
+        var destinations = ls[1].Split(", ");
+        switch (moduleName[0])
+        {
+            case '%':
+                modules.Add(moduleName[1..], new FlipFlop(moduleName[1..], destinations));
+                break;
+            case '&':
+                modules.Add(moduleName[1..], new Conjuntion(moduleName[1..], destinations));
+                break;
+            default:
+                modules.Add(moduleName, new Broadcast(moduleName, destinations));
+                break;
+        }
+    }
+    Dictionary<string, Conjuntion> conjunctions = [];
+    foreach (var conjunction in modules.Values.OfType<Conjuntion>())
+        conjunctions.Add(conjunction.ID, conjunction);
+
+    foreach (var module in modules.Values)
+        foreach (var destinationId in module.Destinations)
+            if (conjunctions.TryGetValue(destinationId, out var conjuntion))
+                conjuntion.addMemoryCell(module.ID);
+
+    return (modules,conjunctions);
 }
 
 Conjuntion findConjunctionTargetting(string destinationId)
